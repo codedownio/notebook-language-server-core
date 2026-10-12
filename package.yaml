@@ -1,0 +1,39 @@
+name: notebook-language-server-core
+version: 0.1.0.0
+license: BSD-3-Clause
+
+default-extensions:
+- OverloadedStrings
+- QuasiQuotes
+- NamedFieldPuns
+- RecordWildCards
+- ScopedTypeVariables
+- FlexibleContexts
+- FlexibleInstances
+- LambdaCase
+- ViewPatterns
+- MultiParamTypeClasses
+- MultiWayIf
+- TupleSections
+- NumericUnderscores
+- TypeApplications
+
+ghc-options:
+- -Wunused-packages
+- -Wall
+- -fno-warn-name-shadowing
+
+library:
+  source-dirs: src
+  dependencies:
+  - aeson
+  - base
+  - lsp-types
+  - monad-logger
+  - myers-diff
+  - process
+  - retry
+  - string-interpolate
+  - text
+  - text-rope
+  - lens
