@@ -27,6 +27,7 @@ library:
   source-dirs: src
   dependencies:
   - aeson
+  - auto-update
   - base
   - containers
   - filepath
