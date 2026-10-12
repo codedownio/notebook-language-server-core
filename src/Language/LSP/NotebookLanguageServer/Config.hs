@@ -19,5 +19,6 @@ data NotebookConfig tx = NotebookConfig {
   , notebookConfigOnDocumentsChanged :: forall n. TransformerMonad tx n => n ()
   , notebookConfigTransformInitialize :: forall n. TransformerMonad tx n => InitializeParams -> n InitializeParams
   , notebookConfigCustomUriMethods :: [Text]
+  , notebookConfigIgnoreSymbol :: Text -> Bool
   , notebookConfigLanguageName :: Text
   }
