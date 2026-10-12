@@ -54,7 +54,7 @@ transformClientNot' :: (
     -> MessageParams m
     -> n (MessageParams m)
 
-transformClientNot' config sendExtraNotification SMethod_TextDocumentDidOpen params = whenAnything params $ \u -> do
+transformClientNot' config sendExtraNotification SMethod_TextDocumentDidOpen params = whenHandled (notebookConfigHandles config) params $ \u -> do
   let t = params ^. (textDocument . text)
   let ls = Rope.fromText t
   let txParams = if isNotebook u then notebookConfigTransformerParams config else notebookConfigIdTransformerParams config
@@ -99,14 +99,14 @@ transformClientNot' config sendExtraNotification SMethod_TextDocumentDidOpen par
          & set (textDocument . text) (Rope.toText ls')
          & set (textDocument . uri) newUri
 
-transformClientNot' config _ SMethod_TextDocumentDidChange params = whenAnything params $ modifyTransformer params $ \ds@(DocumentState {transformer=tx, curLines=before, curLines'=before', origUri, newUri, debouncedDidChange}) -> do
+transformClientNot' config _ SMethod_TextDocumentDidChange params = whenHandled (notebookConfigHandles config) params $ modifyTransformer params $ \ds@(DocumentState {transformer=tx, curLines=before, curLines'=before', origUri, newUri, debouncedDidChange}) -> do
   let txParams = if isNotebook origUri then notebookConfigTransformerParams config else notebookConfigIdTransformerParams config
   let changeEvents = params ^. contentChanges
   (changeEvents', tx') <- handleDiffMulti txParams before changeEvents tx
   let after = applyChanges changeEvents before
   let after' = applyChanges changeEvents' before'
 
-  liftIO debouncedDidChange
+  when (notebookConfigWriteFileOnChange config) $ liftIO debouncedDidChange
 
   return (
     ds { transformer = tx'
@@ -117,12 +117,12 @@ transformClientNot' config _ SMethod_TextDocumentDidChange params = whenAnything
              & set (textDocument . uri) newUri
     )
 
-transformClientNot' config _ SMethod_TextDocumentDidClose params = whenAnything params $ \u -> do
+transformClientNot' config _ SMethod_TextDocumentDidClose params = whenHandled (notebookConfigHandles config) params $ \u -> do
   TransformerState {..} <- ask
   maybeDocumentState <- modifyMVar transformerDocuments (return . flipTuple . M.updateLookupWithKey (\_ _ -> Nothing) (getUri u))
   newUri <- case maybeDocumentState of
     Just (DocumentState {..}) -> do
-      removePathForcibly newPath
+      when (notebookConfigWriteFileOnChange config) $ removePathForcibly newPath
       pure newUri
     Nothing -> notebookConfigUnopenedUri config u
   notebookConfigOnDocumentsChanged config

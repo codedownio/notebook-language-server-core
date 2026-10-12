@@ -50,8 +50,8 @@ transformServerRsp' _ SMethod_Initialize _initialParams result = do
   modifyMVar_ initializeResultVar (\_ -> return $ Just result)
   return result
 
-transformServerRsp' _ SMethod_TextDocumentCompletion initialParams result =
-  whenAnythingByInitialParams initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) -> do
+transformServerRsp' config SMethod_TextDocumentCompletion initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) -> do
     let fixupCompletionEdit Nothing = Nothing
         fixupCompletionEdit (Just (InL edit)) = InL <$> (untransformRanged tx edit)
         fixupCompletionEdit (Just (InR (InsertReplaceEdit newText insert replace))) =
@@ -67,32 +67,32 @@ transformServerRsp' _ SMethod_TextDocumentCompletion initialParams result =
       (InR (InL completionList)) -> return (InR (InL (completionList & over items (fmap fixupItem))))
       (InR (InR null)) -> return $ InR $ InR null
 
-transformServerRsp' _ SMethod_TextDocumentDocumentHighlight initialParams result =
-  whenAnythingByInitialParams initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
+transformServerRsp' config SMethod_TextDocumentDocumentHighlight initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
     case result of
       InL highlights -> return $ InL $ mapMaybe (untransformRanged tx) highlights
       InR null -> return $ InR null
 
-transformServerRsp' _ SMethod_TextDocumentFormatting initialParams result =
-  whenAnythingByInitialParams initialParams result $ withTransformer result $ \ds ->
+transformServerRsp' config SMethod_TextDocumentFormatting initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
     case result of
       InL edits -> return $ InL $ untransformFormattingEdits ds edits
       InR null -> return $ InR null
 
-transformServerRsp' _ SMethod_TextDocumentOnTypeFormatting initialParams result =
-  whenAnythingByInitialParams initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
+transformServerRsp' config SMethod_TextDocumentOnTypeFormatting initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
     case result of
       InL edits -> return $ InL $ mapMaybe (untransformRanged tx) edits
       InR null -> return $ InR null
 
-transformServerRsp' _ SMethod_TextDocumentInlayHint initialParams result =
-  whenAnythingByInitialParams initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
+transformServerRsp' config SMethod_TextDocumentInlayHint initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
     case result of
       InL hints -> return $ InL $ mapMaybe (untransformInlayHint tx) hints
       InR null -> return $ InR null
 
-transformServerRsp' _ SMethod_TextDocumentHover initialParams result =
-  whenAnythingByInitialParams initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
+transformServerRsp' config SMethod_TextDocumentHover initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
     case result of
       InR null -> return $ InR null
       InL hov -> do
@@ -102,7 +102,7 @@ transformServerRsp' _ SMethod_TextDocumentHover initialParams result =
           Nothing -> InR LSP.Null
 
 transformServerRsp' config SMethod_TextDocumentDocumentSymbol initialParams result =
-  whenAnythingByInitialParams initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
     case result of
       InL symbolInformations -> return $ InL (symbolInformations & filter (not . ignoreSymbol)
                                                                  & mapMaybe (traverseOf (location . range) (untransformRange tx)))
@@ -115,16 +115,16 @@ transformServerRsp' config SMethod_TextDocumentDocumentSymbol initialParams resu
     ignoreSymbol sym = notebookConfigIgnoreSymbol config (sym ^. name)
 
 transformServerRsp' _ SMethod_TextDocumentCodeAction _initialParams (InR null) = return $ InR null
-transformServerRsp' _ SMethod_TextDocumentCodeAction initialParams (InL result) = (InL <$>) $
-  whenAnythingByInitialParams initialParams result $ withTransformer result $ \(DocumentState {}) -> do
+transformServerRsp' config SMethod_TextDocumentCodeAction initialParams (InL result) = (InL <$>) $
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {}) -> do
     filterM (fmap not . isInternalReferringCodeAction) result
   where
     isInternalReferringCodeAction (InL _command) = pure False
     isInternalReferringCodeAction (InR _codeAction) = pure False
 
 transformServerRsp' _ SMethod_TextDocumentCodeLens _initialParams (InR null) = return $ InR null
-transformServerRsp' _ SMethod_TextDocumentCodeLens initialParams (InL result) = (InL <$>) $
-  whenAnythingByInitialParams initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) -> do
+transformServerRsp' config SMethod_TextDocumentCodeLens initialParams (InL result) = (InL <$>) $
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) -> do
     return $ mapMaybe (untransformRanged tx) result
 
 transformServerRsp' _ _ _ result = return result

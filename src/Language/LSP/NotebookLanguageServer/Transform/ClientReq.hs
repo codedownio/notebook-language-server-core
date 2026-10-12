@@ -45,24 +45,24 @@ transformClientReq' config SMethod_Initialize params = do
 
   notebookConfigTransformInitialize config params
 
-transformClientReq' _ SMethod_TextDocumentCodeAction params = whenAnything params $ withTransformer params $ doTransformUriAndRange @m params
-transformClientReq' _ SMethod_TextDocumentCodeLens params = whenAnything params $ withTransformer params $ doTransformUri @m params
-transformClientReq' _ SMethod_TextDocumentCompletion params = whenAnything params $ withTransformer params $ doTransformUriAndPosition @m params
-transformClientReq' _ SMethod_TextDocumentDefinition params = whenAnything params $ withTransformer params $ doTransformUriAndPosition @m params
-transformClientReq' _ SMethod_TextDocumentDocumentHighlight params = whenAnything params $ withTransformer params $ doTransformUriAndPosition @m params
-transformClientReq' _ SMethod_TextDocumentDocumentSymbol params = whenAnything params $ withTransformer params $ doTransformUri @m params
-transformClientReq' _ SMethod_TextDocumentFormatting params = whenAnything params $ withTransformer params $ doTransformUri @m params
-transformClientReq' _ SMethod_TextDocumentHover params = whenAnything params $ withTransformer params $ doTransformUriAndPosition @m params
-transformClientReq' _ SMethod_TextDocumentImplementation params = whenAnything params $ withTransformer params $ doTransformUriAndPosition @m params
-transformClientReq' _ SMethod_TextDocumentInlayHint params = whenAnything params $ withTransformer params $ doTransformUriAndRange @m params
-transformClientReq' _ SMethod_TextDocumentOnTypeFormatting params = whenAnything params $ withTransformer params $ doTransformUriAndPosition @m params
-transformClientReq' _ SMethod_TextDocumentTypeDefinition params = whenAnything params $ withTransformer params $ doTransformUriAndPosition @m params
+transformClientReq' config SMethod_TextDocumentCodeAction params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndRange @m params
+transformClientReq' config SMethod_TextDocumentCodeLens params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUri @m params
+transformClientReq' config SMethod_TextDocumentCompletion params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
+transformClientReq' config SMethod_TextDocumentDefinition params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
+transformClientReq' config SMethod_TextDocumentDocumentHighlight params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
+transformClientReq' config SMethod_TextDocumentDocumentSymbol params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUri @m params
+transformClientReq' config SMethod_TextDocumentFormatting params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUri @m params
+transformClientReq' config SMethod_TextDocumentHover params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
+transformClientReq' config SMethod_TextDocumentImplementation params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
+transformClientReq' config SMethod_TextDocumentInlayHint params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndRange @m params
+transformClientReq' config SMethod_TextDocumentOnTypeFormatting params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
+transformClientReq' config SMethod_TextDocumentTypeDefinition params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
 
 transformClientReq' config (SMethod_CustomMethod p) val
   | T.pack (symbolVal p) `elem` notebookConfigCustomUriMethods config = case A.fromJSON val of
       A.Error err -> logErrorN [i|Failed to decode custom method "#{symbolVal p}": #{err}|] >> return val
       A.Success (TextDocumentIdentifier uri) ->
-        whenAnything' uri val $
+        whenHandled' (notebookConfigHandles config) uri val $
           withTransformer val $ \(DocumentState {newUri}) ->
             return $ A.toJSON $ TextDocumentIdentifier newUri
   | otherwise = return val

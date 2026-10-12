@@ -34,31 +34,17 @@ import UnliftIO.MVar
 
 type SendExtraNotificationFn n = forall (o :: Method 'ClientToServer 'Notification). ToJSON (TNotificationMessage o) => TNotificationMessage o -> n ()
 
--- * whenAnything
+-- * whenHandled
 
-whenAnything :: (MonadLoggerIO n, HasTextDocument a b, HasUri b Uri) => a -> (Uri -> n a) -> n a
-whenAnything params = whenAnything' (params ^. (textDocument . uri)) params
+whenHandled :: (MonadLoggerIO n, HasTextDocument a b, HasUri b Uri) => (Uri -> Bool) -> a -> (Uri -> n a) -> n a
+whenHandled handles params = whenHandled' handles (params ^. (textDocument . uri)) params
 
-whenAnythingByInitialParams :: (MonadLoggerIO n, HasTextDocument a b, HasUri b Uri) => a -> c -> (Uri -> n c) -> n c
-whenAnythingByInitialParams params = whenAnything' (params ^. (textDocument . uri))
+whenHandledByInitialParams :: (MonadLoggerIO n, HasTextDocument a b, HasUri b Uri) => (Uri -> Bool) -> a -> c -> (Uri -> n c) -> n c
+whenHandledByInitialParams handles params = whenHandled' handles (params ^. (textDocument . uri))
 
-whenAnything' :: (MonadLoggerIO n) => Uri -> a -> (Uri -> n a) -> n a
-whenAnything' uri _params action = action uri
-
--- * whenNotebook
-
-whenNotebook :: (MonadLoggerIO n, HasTextDocument a b, HasUri b Uri) => a -> (Uri -> n a) -> n a
-whenNotebook params = whenNotebook' (params ^. (textDocument . uri)) params
-
-whenNotebookUri :: (MonadLoggerIO n, HasUri a Uri) => a -> (Uri -> n a) -> n a
-whenNotebookUri params = whenNotebook' (params ^. uri) params
-
-whenNotebookByInitialParams :: (MonadLoggerIO n, HasTextDocument a b, HasUri b Uri) => a -> c -> (Uri -> n c) -> n c
-whenNotebookByInitialParams params = whenNotebook' (params ^. (textDocument . uri))
-
-whenNotebook' :: (MonadLoggerIO n) => Uri -> a -> (Uri -> n a) -> n a
-whenNotebook' uri params notebookParams = if
-  | isNotebook uri -> notebookParams uri
+whenHandled' :: (MonadLoggerIO n) => (Uri -> Bool) -> Uri -> a -> (Uri -> n a) -> n a
+whenHandled' handles uri params action = if
+  | handles uri -> action uri
   | otherwise -> pure params
 
 isNotebook :: Uri -> Bool

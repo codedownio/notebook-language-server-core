@@ -12,7 +12,9 @@ import Text.Regex.PCRE.Light (Regex)
 
 
 data NotebookConfig tx = NotebookConfig {
-  notebookConfigTransformerParams :: Params tx
+  notebookConfigHandles :: Uri -> Bool
+  , notebookConfigWriteFileOnChange :: Bool
+  , notebookConfigTransformerParams :: Params tx
   , notebookConfigIdTransformerParams :: Params tx
   , notebookConfigMakeShadowDocument :: forall n. TransformerMonad tx n => Uri -> Doc -> n (Uri, FilePath, Regex)
   , notebookConfigUnopenedUri :: forall n. TransformerMonad tx n => Uri -> n Uri
