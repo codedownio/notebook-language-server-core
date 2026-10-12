@@ -14,6 +14,7 @@ import Control.Monad.Logger
 import Control.Monad.Reader
 import Data.Aeson as A
 import Data.Map as M
+import Data.Maybe (isJust)
 import Data.String.Interpolate
 import qualified Data.Text.Rope as Rope
 import Data.Time
@@ -67,18 +68,20 @@ transformClientNot' config sendExtraNotification SMethod_TextDocumentDidOpen par
 
   uuid <- liftIO UUID.nextRandom
 
-  debouncedDidChange <- withRunInIO $ \runInIO -> mkDebounce (
-    defaultDebounceSettings {
-        debounceAction = do
-          withMVar transformerDocuments $ \m ->
-            case M.lookup (getUri u) m of
-              (Just ds@(DocumentState {..}))
-                | documentUuid == uuid -> runInIO $ doDidSave ds sendExtraNotification
-                | otherwise -> return ()
-              _ -> return ()
-        , debounceFreq = transformerDidSaveDebouncePeriodMs * 1000
-        , debounceEdge = trailingEdge
-        })
+  debouncedDidChange <- case notebookConfigDidSaveDebounceMs config of
+    Nothing -> pure (pure ())
+    Just periodMs -> withRunInIO $ \runInIO -> mkDebounce (
+      defaultDebounceSettings {
+          debounceAction = do
+            withMVar transformerDocuments $ \m ->
+              case M.lookup (getUri u) m of
+                (Just ds@(DocumentState {..}))
+                  | documentUuid == uuid -> runInIO $ doDidSave ds sendExtraNotification
+                  | otherwise -> return ()
+                _ -> return ()
+          , debounceFreq = periodMs * 1000
+          , debounceEdge = trailingEdge
+          })
 
   modifyMVar_ transformerDocuments $ \x -> return $! M.insert (getUri u) (
     DocumentState {
@@ -106,7 +109,7 @@ transformClientNot' config _ SMethod_TextDocumentDidChange params = whenHandled 
   let after = applyChanges changeEvents before
   let after' = applyChanges changeEvents' before'
 
-  when (notebookConfigWriteFileOnChange config) $ liftIO debouncedDidChange
+  liftIO debouncedDidChange
 
   return (
     ds { transformer = tx'
@@ -122,7 +125,7 @@ transformClientNot' config _ SMethod_TextDocumentDidClose params = whenHandled (
   maybeDocumentState <- modifyMVar transformerDocuments (return . flipTuple . M.updateLookupWithKey (\_ _ -> Nothing) (getUri u))
   newUri <- case maybeDocumentState of
     Just (DocumentState {..}) -> do
-      when (notebookConfigWriteFileOnChange config) $ removePathForcibly newPath
+      when (isJust (notebookConfigDidSaveDebounceMs config)) $ removePathForcibly newPath
       pure newUri
     Nothing -> notebookConfigUnopenedUri config u
   notebookConfigOnDocumentsChanged config
