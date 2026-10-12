@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module App.Process where
+module Language.LSP.NotebookLanguageServer.Process where
 
 import Control.Monad
 import Control.Monad.IO.Class

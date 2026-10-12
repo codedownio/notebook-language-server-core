@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PolyKinds #-}
 
-module App.RequestMap where
+module Language.LSP.NotebookLanguageServer.RequestMap where
 
 import Data.IxMap
 import Data.Kind

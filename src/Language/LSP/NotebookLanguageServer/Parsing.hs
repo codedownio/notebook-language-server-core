@@ -9,7 +9,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
-module App.Parsing where
+module Language.LSP.NotebookLanguageServer.Parsing where
 
 import Data.Aeson
 import Data.Aeson.Types
