@@ -1,23 +1,12 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Language.LSP.NotebookLanguageServer.Transform.Common where
 
 import Control.Lens hiding (List)
-import Control.Monad.Logger
-import Control.Monad.Reader
-import Data.Map as M
-import qualified Data.Maybe
-import Data.String.Interpolate
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
+import Data.Maybe
 import Language.LSP.Transformer
 import Language.LSP.Protocol.Types
 import Language.LSP.Protocol.Lens as Lens
-import System.FilePath
-import Language.LSP.NotebookLanguageServer.Transform.Util
-import UnliftIO.Directory
-import UnliftIO.MVar
 
 
 -- * Transform
@@ -52,21 +41,9 @@ untransformInlayHint :: Transformer tx => tx -> InlayHint -> Maybe InlayHint
 untransformInlayHint tx hint =
   hint
     & traverseOf position (untransformPosition tx)
-    & fmap (over (textEdits . _Just) (Data.Maybe.mapMaybe (untransformRanged tx)))
+    & fmap (over (textEdits . _Just) (mapMaybe (untransformRanged tx)))
 
 -- * Orphan (wish this was in lsp-types)
 
 instance HasRange Range Range where
   range = Prelude.id
-
--- * Update the shadow lib.rs file
-
-updateLibRs :: (TransformerMonad tx m, Transformer tx) => m ()
-updateLibRs = do
-  TransformerState {..} <- ask
-  docs <- readMVar transformerDocuments
-  let identifiers = [dropExtension (takeFileName newPath) | DocumentState {..} <- fmap snd (M.toList docs)]
-  let libRsContent = T.intercalate "\n" [T.pack ("mod " <> x <> ";") | x <- identifiers]
-  logInfoN [i|libRsContent: #{libRsContent}|]
-  liftIO $ createDirectoryIfMissing True (transformerShadowDir </> "src")
-  liftIO $ T.writeFile (transformerShadowDir </> "src" </> "lib.rs") libRsContent

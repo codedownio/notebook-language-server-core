@@ -15,8 +15,6 @@ import Control.Monad.Reader
 import Data.Aeson as A
 import Data.Map as M
 import Data.String.Interpolate
-import Data.Text as T
-import qualified Data.Text.IO as T
 import qualified Data.Text.Rope as Rope
 import Data.Time
 import qualified Data.UUID.V4 as UUID
@@ -24,10 +22,7 @@ import Language.LSP.Protocol.Lens as Lens
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import Language.LSP.Transformer
-import System.FilePath
 import Language.LSP.NotebookLanguageServer.Transform.ClientNot.DidSave
-import Language.LSP.NotebookLanguageServer.Transform.Common
-import Language.LSP.NotebookLanguageServer.Transform.ServerRsp.Hover (mkDocRegex)
 import Language.LSP.NotebookLanguageServer.Transform.Util
 import UnliftIO.Concurrent
 import UnliftIO.Directory
@@ -134,4 +129,4 @@ transformClientNot' config _ SMethod_TextDocumentDidClose params = whenAnything 
   return $ params
          & set (textDocument . uri) newUri
 
-transformClientNot' config _ _ params = return params
+transformClientNot' _ _ _ params = return params
