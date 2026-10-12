@@ -17,5 +17,7 @@ data NotebookConfig tx = NotebookConfig {
   , notebookConfigMakeShadowDocument :: forall n. TransformerMonad tx n => Uri -> Doc -> n (Uri, FilePath, Regex)
   , notebookConfigUnopenedUri :: forall n. TransformerMonad tx n => Uri -> n Uri
   , notebookConfigOnDocumentsChanged :: forall n. TransformerMonad tx n => n ()
+  , notebookConfigTransformInitialize :: forall n. TransformerMonad tx n => InitializeParams -> n InitializeParams
+  , notebookConfigCustomUriMethods :: [Text]
   , notebookConfigLanguageName :: Text
   }
