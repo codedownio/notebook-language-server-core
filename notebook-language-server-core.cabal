@@ -1,0 +1,77 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.39.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           notebook-language-server-core
+version:        0.1.0.0
+license:        BSD-3-Clause
+build-type:     Simple
+
+library
+  exposed-modules:
+      Language.LSP.NotebookLanguageServer.Config
+      Language.LSP.NotebookLanguageServer.Parsing
+      Language.LSP.NotebookLanguageServer.Process
+      Language.LSP.NotebookLanguageServer.RequestMap
+      Language.LSP.NotebookLanguageServer.Transform.ClientNot
+      Language.LSP.NotebookLanguageServer.Transform.ClientNot.DidSave
+      Language.LSP.NotebookLanguageServer.Transform.ClientReq
+      Language.LSP.NotebookLanguageServer.Transform.ClientRsp
+      Language.LSP.NotebookLanguageServer.Transform.Common
+      Language.LSP.NotebookLanguageServer.Transform.ServerNot
+      Language.LSP.NotebookLanguageServer.Transform.ServerReq
+      Language.LSP.NotebookLanguageServer.Transform.ServerRsp
+      Language.LSP.NotebookLanguageServer.Transform.ServerRsp.Formatting
+      Language.LSP.NotebookLanguageServer.Transform.ServerRsp.Hover
+      Language.LSP.NotebookLanguageServer.Transform.Util
+      Language.LSP.Transformer
+  other-modules:
+      Paths_notebook_language_server_core
+  autogen-modules:
+      Paths_notebook_language_server_core
+  hs-source-dirs:
+      src
+  default-extensions:
+      OverloadedStrings
+      QuasiQuotes
+      NamedFieldPuns
+      RecordWildCards
+      ScopedTypeVariables
+      FlexibleContexts
+      FlexibleInstances
+      LambdaCase
+      ViewPatterns
+      MultiParamTypeClasses
+      MultiWayIf
+      TupleSections
+      NumericUnderscores
+      TypeApplications
+  ghc-options: -Wunused-packages -Wall -fno-warn-name-shadowing
+  build-depends:
+      aeson
+    , auto-update
+    , base
+    , containers
+    , filepath
+    , lens
+    , lens-regex-pcre
+    , lsp-types
+    , monad-logger
+    , mtl
+    , myers-diff
+    , network-uri
+    , pcre-light
+    , process
+    , random
+    , retry
+    , safe
+    , string-interpolate
+    , text
+    , text-rope
+    , time
+    , unliftio
+    , unliftio-core
+    , uuid
+  default-language: Haskell2010
