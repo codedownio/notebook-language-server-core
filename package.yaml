@@ -28,12 +28,24 @@ library:
   dependencies:
   - aeson
   - base
+  - containers
+  - filepath
+  - lens
+  - lens-regex-pcre
   - lsp-types
   - monad-logger
+  - mtl
   - myers-diff
+  - network-uri
+  - pcre-light
   - process
+  - random
   - retry
+  - safe
   - string-interpolate
   - text
   - text-rope
-  - lens
+  - time
+  - unliftio
+  - unliftio-core
+  - uuid
