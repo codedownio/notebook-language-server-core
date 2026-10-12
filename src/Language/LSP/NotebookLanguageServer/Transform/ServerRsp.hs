@@ -1,6 +1,7 @@
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Language.LSP.NotebookLanguageServer.Transform.ServerRsp where
 
@@ -116,11 +117,22 @@ transformServerRsp' config SMethod_TextDocumentDocumentSymbol initialParams resu
 
 transformServerRsp' _ SMethod_TextDocumentCodeAction _initialParams (InR null) = return $ InR null
 transformServerRsp' config SMethod_TextDocumentCodeAction initialParams (InL result) = (InL <$>) $
-  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {}) -> do
-    filterM (fmap not . isInternalReferringCodeAction) result
-  where
-    isInternalReferringCodeAction (InL _command) = pure False
-    isInternalReferringCodeAction (InR _codeAction) = pure False
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
+    return $ mapMaybe (untransformCodeActionOrCommand ds) result
+
+-- | rust-analyzer fills in a code action's edit inline when it can and leaves it for resolve
+-- when it can't, so both paths need untransforming. A resolve carries no text document, so the
+-- notebook has to be found from the shadow uri the edit names.
+transformServerRsp' _ SMethod_CodeActionResolve _initialParams result = case result ^. edit of
+  Nothing -> return result
+  Just workspaceEdit -> case workspaceEditUri workspaceEdit of
+    Nothing -> return result
+    Just u -> whenReverseLookupUri' u result $ \ds ->
+      case untransformWorkspaceEdit ds workspaceEdit of
+        Just workspaceEdit' -> return $ set edit (Just workspaceEdit') result
+        Nothing -> do
+          logWarnN [i|Dropping the edit on resolved code action "#{result ^. title}": it doesn't map back to the notebook|]
+          return $ set edit Nothing result
 
 transformServerRsp' _ SMethod_TextDocumentCodeLens _initialParams (InR null) = return $ InR null
 transformServerRsp' config SMethod_TextDocumentCodeLens initialParams (InL result) = (InL <$>) $
@@ -128,3 +140,12 @@ transformServerRsp' config SMethod_TextDocumentCodeLens initialParams (InL resul
     return $ mapMaybe (untransformRanged tx) result
 
 transformServerRsp' _ _ _ result = return result
+
+-- | A code action whose edit can't be mapped back to the notebook is dropped rather than
+-- offered to the client, which would then fail to apply it. Commands pass through: their
+-- arguments are server-defined and we have nothing to map.
+untransformCodeActionOrCommand :: Transformer tx => DocumentState tx -> (Command |? CodeAction) -> Maybe (Command |? CodeAction)
+untransformCodeActionOrCommand _ command@(InL _) = Just command
+untransformCodeActionOrCommand ds (InR codeAction) = InR <$> case codeAction ^. edit of
+  Nothing -> Just codeAction
+  Just workspaceEdit -> flip (set edit) codeAction . Just <$> untransformWorkspaceEdit ds workspaceEdit

@@ -50,3 +50,23 @@ library:
   - unliftio
   - unliftio-core
   - uuid
+
+tests:
+  notebook-language-server-core-test:
+    main: Main.hs
+    source-dirs:
+    - test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -O2
+    - -W
+    dependencies:
+    - base >= 4.7 && < 5
+    - containers
+    - lsp-types >= 2.0.0.1
+    - notebook-language-server-core
+    - pcre-light
+    - sandwich
+    - uuid
