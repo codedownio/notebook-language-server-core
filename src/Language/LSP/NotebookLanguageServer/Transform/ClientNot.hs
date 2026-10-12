@@ -57,7 +57,7 @@ transformClientNot' :: (
 transformClientNot' config sendExtraNotification SMethod_TextDocumentDidOpen params = whenHandled (notebookConfigHandles config) params $ \u -> do
   let t = params ^. (textDocument . text)
   let ls = Rope.fromText t
-  let txParams = if isNotebook u then notebookConfigTransformerParams config else notebookConfigIdTransformerParams config
+  let txParams = notebookConfigTransformerParamsFor config u
   (ls', transformer', eitherErr) <- project txParams ls
   case eitherErr of
     Left err -> logWarnN [i|(#{u}) Project failed: #{err}|]
@@ -100,7 +100,7 @@ transformClientNot' config sendExtraNotification SMethod_TextDocumentDidOpen par
          & set (textDocument . uri) newUri
 
 transformClientNot' config _ SMethod_TextDocumentDidChange params = whenHandled (notebookConfigHandles config) params $ modifyTransformer params $ \ds@(DocumentState {transformer=tx, curLines=before, curLines'=before', origUri, newUri, debouncedDidChange}) -> do
-  let txParams = if isNotebook origUri then notebookConfigTransformerParams config else notebookConfigIdTransformerParams config
+  let txParams = notebookConfigTransformerParamsFor config origUri
   let changeEvents = params ^. contentChanges
   (changeEvents', tx') <- handleDiffMulti txParams before changeEvents tx
   let after = applyChanges changeEvents before
