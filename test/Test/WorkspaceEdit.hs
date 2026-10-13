@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.WorkspaceEdit (spec) where
+module Test.WorkspaceEdit (tests, main) where
 
 import qualified Data.Map as M
 import qualified Data.UUID as UUID
@@ -16,8 +16,8 @@ import Test.Sandwich
 import Text.Regex.PCRE.Light (compile)
 
 
-spec :: TopSpec
-spec = describe "WorkspaceEdit" $ do
+tests :: TopSpec
+tests = describe "WorkspaceEdit" $ do
   describe "untransformWorkspaceEdit" $ do
     it "rewrites documentChanges to the notebook" $ do
       let before = documentChangesEdit shadowUri [InL (TextEdit (lineRange 5) ": Vec<i32>")]
@@ -102,3 +102,6 @@ documentChangesEdit u edits = WorkspaceEdit Nothing (Just [InL textDocumentEdit]
 
 changesEdit :: Uri -> [TextEdit] -> WorkspaceEdit
 changesEdit u edits = WorkspaceEdit (Just (M.singleton u edits)) Nothing Nothing
+
+main :: IO ()
+main = runSandwichWithCommandLineArgs defaultOptions tests

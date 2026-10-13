@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.CodeLens (spec) where
+module Test.CodeLens (tests, main) where
 
 import qualified Data.Aeson as A
 import Language.LSP.NotebookLanguageServer.Transform.Common
@@ -8,8 +8,8 @@ import Language.LSP.Protocol.Types
 import Test.Sandwich
 
 
-spec :: TopSpec
-spec = describe "CodeLens" $ do
+tests :: TopSpec
+tests = describe "CodeLens" $ do
   describe "lens data stamping" $ do
     it "round-trips the notebook uri and the server's own data" $ do
       let stamped = stampLensData notebookUri (lens_ (Just (A.object ["hls" A..= (1 :: Int)])))
@@ -31,3 +31,6 @@ lens_ d = CodeLens (Range (Position 3 0) (Position 3 5)) Nothing d
 
 notebookUri :: Uri
 notebookUri = Uri "file:///home/main.ipynb"
+
+main :: IO ()
+main = runSandwichWithCommandLineArgs defaultOptions tests
