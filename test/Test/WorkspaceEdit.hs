@@ -102,6 +102,3 @@ documentChangesEdit u edits = WorkspaceEdit Nothing (Just [InL textDocumentEdit]
 
 changesEdit :: Uri -> [TextEdit] -> WorkspaceEdit
 changesEdit u edits = WorkspaceEdit (Just (M.singleton u edits)) Nothing Nothing
-
-main :: IO ()
-main = runSandwichWithCommandLineArgs defaultOptions spec

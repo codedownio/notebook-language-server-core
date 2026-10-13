@@ -4,6 +4,8 @@ module Language.LSP.NotebookLanguageServer.Transform.Common where
 
 import Control.Applicative
 import Control.Lens hiding (List)
+import qualified Data.Aeson as A
+import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Map as M
 import Data.Maybe
 import Language.LSP.NotebookLanguageServer.Transform.Util
@@ -85,6 +87,22 @@ workspaceEditUri (WorkspaceEdit changes documentChanges _changeAnnotations) =
   where
     documentChangeUris (InL (TextDocumentEdit ident _edits)) = [ident ^. uri]
     documentChangeUris (InR _fileOperation) = []
+
+-- * Code lens data
+
+-- | codeLens/resolve carries no text document, so the notebook a lens came from rides along in
+-- the lens's @data@ next to whatever the server put there.
+stampLensData :: Uri -> CodeLens -> CodeLens
+stampLensData u lens = lens & set data_ (Just (A.object ["nls_uri" A..= u, "nls_data" A..= (lens ^. data_)]))
+
+unstampLensData :: CodeLens -> Maybe (Uri, CodeLens)
+unstampLensData lens = case lens ^. data_ of
+  Just (A.Object o) | Just (A.Success u) <- A.fromJSON <$> KM.lookup "nls_uri" o ->
+    Just (u, set data_ (KM.lookup "nls_data" o >>= nonNull) lens)
+  _ -> Nothing
+  where
+    nonNull A.Null = Nothing
+    nonNull v = Just v
 
 -- * Orphan (wish this was in lsp-types)
 

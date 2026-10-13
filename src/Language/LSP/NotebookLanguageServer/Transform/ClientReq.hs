@@ -47,6 +47,14 @@ transformClientReq' config SMethod_Initialize params = do
 
 transformClientReq' config SMethod_TextDocumentCodeAction params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndRange @m params
 transformClientReq' config SMethod_TextDocumentCodeLens params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUri @m params
+transformClientReq' config SMethod_CodeLensResolve params = case unstampLensData params of
+  Nothing -> return params
+  Just (u, params') -> whenHandled' (notebookConfigHandles config) u params' $ withTransformer params' $ \(DocumentState {transformer=tx}) ->
+    case transformRange tx (params' ^. range) of
+      Nothing -> do
+        logWarnN [i|Couldn't transform code lens range #{params' ^. range}|]
+        return params'
+      Just r -> return $ set range r params'
 transformClientReq' config SMethod_TextDocumentCompletion params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
 transformClientReq' config SMethod_TextDocumentDefinition params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
 transformClientReq' config SMethod_TextDocumentDocumentHighlight params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
