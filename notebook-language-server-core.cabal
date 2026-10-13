@@ -80,6 +80,7 @@ test-suite notebook-language-server-core-test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
+      Test.CodeLens
       Test.WorkspaceEdit
       Paths_notebook_language_server_core
   autogen-modules:
@@ -103,7 +104,8 @@ test-suite notebook-language-server-core-test
       TypeApplications
   ghc-options: -Wunused-packages -Wall -fno-warn-name-shadowing -threaded -rtsopts -with-rtsopts=-N -O2 -W
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , containers
     , lsp-types >=2.0.0.1
     , notebook-language-server-core

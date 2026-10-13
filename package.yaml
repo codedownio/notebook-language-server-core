@@ -63,6 +63,7 @@ tests:
     - -O2
     - -W
     dependencies:
+    - aeson
     - base >= 4.7 && < 5
     - containers
     - lsp-types >= 2.0.0.1

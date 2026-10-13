@@ -136,8 +136,13 @@ transformServerRsp' _ SMethod_CodeActionResolve _initialParams result = case res
 
 transformServerRsp' _ SMethod_TextDocumentCodeLens _initialParams (InR null) = return $ InR null
 transformServerRsp' config SMethod_TextDocumentCodeLens initialParams (InL result) = (InL <$>) $
-  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) -> do
-    return $ mapMaybe (untransformRanged tx) result
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx, origUri}) -> do
+    return $ fmap (stampLensData origUri) (mapMaybe (untransformRanged tx) result)
+
+transformServerRsp' config SMethod_CodeLensResolve initialParams result = case unstampLensData initialParams of
+  Nothing -> return result
+  Just (u, _) -> whenHandled' (notebookConfigHandles config) u result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
+    return $ fromMaybe result (untransformRanged tx result)
 
 transformServerRsp' _ _ _ result = return result
 
