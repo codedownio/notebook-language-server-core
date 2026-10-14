@@ -59,7 +59,9 @@ transformClientReq' config SMethod_TextDocumentCompletion params = whenHandled (
 transformClientReq' config SMethod_TextDocumentDefinition params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
 transformClientReq' config SMethod_TextDocumentDocumentHighlight params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
 transformClientReq' config SMethod_TextDocumentDocumentSymbol params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUri @m params
-transformClientReq' config SMethod_TextDocumentFormatting params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUri @m params
+transformClientReq' config SMethod_TextDocumentFormatting params
+  | notebookConfigHandlesFormatting config = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUri @m params
+  | otherwise = return params
 transformClientReq' config SMethod_TextDocumentHover params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
 transformClientReq' config SMethod_TextDocumentImplementation params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
 transformClientReq' config SMethod_TextDocumentInlayHint params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndRange @m params

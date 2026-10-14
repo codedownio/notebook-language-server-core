@@ -82,6 +82,7 @@ test-suite notebook-language-server-core-test
   other-modules:
       Test
       Test.CodeLens
+      Test.Formatting
       Test.WorkspaceEdit
       Paths_notebook_language_server_core
   autogen-modules:
@@ -114,5 +115,7 @@ test-suite notebook-language-server-core-test
     , notebook-language-server-core
     , pcre-light
     , sandwich
+    , text
+    , text-rope
     , uuid
   default-language: Haskell2010
