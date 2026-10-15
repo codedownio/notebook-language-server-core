@@ -14,6 +14,7 @@ import Text.Regex.PCRE.Light (Regex)
 data NotebookConfig tx = NotebookConfig {
   notebookConfigHandles :: Uri -> Bool
   , notebookConfigDidSaveDebounceMs :: Maybe Int
+  , notebookConfigHandlesFormatting :: Bool
   , notebookConfigTransformerParamsFor :: Uri -> Params tx
   , notebookConfigMakeShadowDocument :: forall n. TransformerMonad tx n => Uri -> Doc -> n (Uri, FilePath, Regex)
   , notebookConfigUnopenedUri :: forall n. TransformerMonad tx n => Uri -> n Uri

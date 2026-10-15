@@ -74,6 +74,8 @@ transformServerRsp' config SMethod_TextDocumentDocumentHighlight initialParams r
       InL highlights -> return $ InL $ mapMaybe (untransformRanged tx) highlights
       InR null -> return $ InR null
 
+transformServerRsp' config SMethod_TextDocumentFormatting _initialParams result
+  | not (notebookConfigHandlesFormatting config) = return result
 transformServerRsp' config SMethod_TextDocumentFormatting initialParams result =
   whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
     case result of

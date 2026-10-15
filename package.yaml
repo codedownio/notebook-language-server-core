@@ -71,4 +71,6 @@ tests:
     - notebook-language-server-core
     - pcre-light
     - sandwich
+    - text
+    - text-rope
     - uuid
