@@ -48,6 +48,32 @@ untransformInlayHint tx hint =
     & traverseOf position (untransformPosition tx)
     & fmap (over (textEdits . _Just) (mapMaybe (untransformRanged tx)))
 
+-- | A location the server answered with, back in the notebook's terms. Anything outside the
+-- document we shadow is left alone: it's a real file the client can open for itself.
+untransformLocation :: Transformer tx => DocumentState tx -> Location -> Maybe Location
+untransformLocation (DocumentState {transformer=tx, origUri, newUri}) loc
+  | loc ^. uri == newUri = set uri origUri <$> untransformRanged tx loc
+  | otherwise = Just loc
+
+untransformLocationLink :: Transformer tx => DocumentState tx -> LocationLink -> Maybe LocationLink
+untransformLocationLink (DocumentState {transformer=tx, origUri, newUri}) link
+  | link ^. targetUri == newUri = do
+      targetRange' <- untransformRange tx (link ^. targetRange)
+      targetSelectionRange' <- untransformRange tx (link ^. targetSelectionRange)
+      originSelectionRange' <- traverse (untransformRange tx) (link ^. originSelectionRange)
+      return $ link
+        & set targetUri origUri
+        & set targetRange targetRange'
+        & set targetSelectionRange targetSelectionRange'
+        & set originSelectionRange originSelectionRange'
+  | otherwise = Just link
+
+-- | A selection range is a chain, each one naming the wider range that contains it.
+untransformSelectionRange :: Transformer tx => tx -> SelectionRange -> Maybe SelectionRange
+untransformSelectionRange tx (SelectionRange r parent) = SelectionRange
+  <$> untransformRange tx r
+  <*> traverse (untransformSelectionRange tx) parent
+
 -- | Map a workspace edit from the shadow document back to the notebook.
 --
 -- 'Nothing' when the edit can't be honoured from the notebook's point of view: it names a
