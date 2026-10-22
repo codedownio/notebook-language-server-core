@@ -67,6 +67,9 @@ transformClientReq' config SMethod_TextDocumentImplementation params = whenHandl
 transformClientReq' config SMethod_TextDocumentInlayHint params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndRange @m params
 transformClientReq' config SMethod_TextDocumentOnTypeFormatting params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
 transformClientReq' config SMethod_TextDocumentTypeDefinition params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
+transformClientReq' config SMethod_TextDocumentSelectionRange params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPositions @m params
+transformClientReq' config SMethod_TextDocumentSemanticTokensFull params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUri @m params
+transformClientReq' config SMethod_TextDocumentSemanticTokensRange params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndRange @m params
 
 transformClientReq' config (SMethod_CustomMethod p) val
   | T.pack (symbolVal p) `elem` notebookConfigCustomUriMethods config = case A.fromJSON val of
@@ -101,6 +104,20 @@ doTransformUriAndRange params' (DocumentState {transformer=tx, newUri}) = do
       logWarnN [i|Couldn't transform range #{params ^. range}|]
       return params
     Just pos' -> return $ set range pos' params
+
+-- | selectionRange asks about several positions at once, so each one moves on its own. A
+-- position that doesn't map is left as it was, the way a single position is.
+doTransformUriAndPositions :: forall m n a tx. (
+  TransformerMonad tx n, Transformer tx, HasPositions (MessageParams m) [Position], HasTextDocument (MessageParams m) a, HasUri a Uri
+  ) => MessageParams m -> DocumentState tx -> n (MessageParams m)
+doTransformUriAndPositions params' (DocumentState {transformer=tx, newUri}) = do
+  let params = params' & set (textDocument . uri) newUri
+  positions' <- forM (params ^. positions) $ \pos -> case transformPosition tx pos of
+    Nothing -> do
+      logWarnN [i|Couldn't transform position #{pos}|]
+      return pos
+    Just pos' -> return pos'
+  return $ set positions positions' params
 
 doTransformUri :: forall m n a tx. (
   TransformerMonad tx n, Transformer tx, HasTextDocument (MessageParams m) a, HasUri a Uri

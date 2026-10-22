@@ -82,9 +82,14 @@ test-suite notebook-language-server-core-test
   other-modules:
       Test
       Test.ApplyEdit
+      Test.CodeAction
       Test.CodeLens
       Test.Formatting
+      Test.Goto
+      Test.SelectionRange
+      Test.SemanticTokens
       Test.WorkspaceEdit
+      TestLib.Config
       TestLib.Transformers
       Paths_notebook_language_server_core
   autogen-modules:

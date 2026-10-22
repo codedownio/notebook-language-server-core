@@ -11,6 +11,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Logger
 import Control.Monad.Reader
 import Data.Aeson as A
+import Data.List (sort)
 import Data.Maybe
 import Data.Text (Text)
 import Data.String.Interpolate
@@ -117,6 +118,39 @@ transformServerRsp' config SMethod_TextDocumentDocumentSymbol initialParams resu
     ignoreSymbol :: HasName a Text => a -> Bool
     ignoreSymbol sym = notebookConfigIgnoreSymbol config (sym ^. name)
 
+-- | The goto family answers with locations inside the shadow document. Without putting them
+-- back the client is told to open a file it has never heard of.
+transformServerRsp' config SMethod_TextDocumentDefinition initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
+    return (untransformDefinitionResult ds result)
+transformServerRsp' config SMethod_TextDocumentDeclaration initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
+    return (untransformDeclarationResult ds result)
+transformServerRsp' config SMethod_TextDocumentTypeDefinition initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
+    return (untransformDefinitionResult ds result)
+transformServerRsp' config SMethod_TextDocumentImplementation initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
+    return (untransformDefinitionResult ds result)
+transformServerRsp' config SMethod_TextDocumentReferences initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
+    return (over _L (mapMaybe (untransformLocation ds)) result)
+
+transformServerRsp' config SMethod_TextDocumentSelectionRange initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
+    return (over _L (mapMaybe (untransformSelectionRange tx)) result)
+
+-- | The token data is groups of five integers, the line relative to the token before it and the
+-- start character relative to that token's start within a line. Moving them means decoding to
+-- absolute positions, mapping, re-sorting and re-encoding: the encoding only reads back
+-- correctly in position order.
+transformServerRsp' config SMethod_TextDocumentSemanticTokensFull initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
+    return (over (_L . Lens.data_) (untransformSemanticTokenData tx) result)
+transformServerRsp' config SMethod_TextDocumentSemanticTokensRange initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
+    return (over (_L . Lens.data_) (untransformSemanticTokenData tx) result)
+
 transformServerRsp' _ SMethod_TextDocumentCodeAction _initialParams (InR null) = return $ InR null
 transformServerRsp' config SMethod_TextDocumentCodeAction initialParams (InL result) = (InL <$>) $
   whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
@@ -147,6 +181,51 @@ transformServerRsp' config SMethod_CodeLensResolve initialParams result = case u
     return $ fromMaybe result (untransformRanged tx result)
 
 transformServerRsp' _ _ _ result = return result
+
+-- | Both Definition and Declaration results come as a location, a list of them, a list of links,
+-- or null. A location that doesn't map back is dropped rather than pointing at nothing.
+untransformDefinitionResult :: Transformer tx => DocumentState tx -> (Definition |? ([DefinitionLink] |? Null)) -> (Definition |? ([DefinitionLink] |? Null))
+untransformDefinitionResult ds (InL (Definition (InL loc))) = case untransformLocation ds loc of
+  Just loc' -> InL (Definition (InL loc'))
+  Nothing -> InR (InR LSP.Null)
+untransformDefinitionResult ds (InL (Definition (InR locs))) = InL (Definition (InR (mapMaybe (untransformLocation ds) locs)))
+untransformDefinitionResult ds (InR (InL links)) = InR (InL (mapMaybe (\(DefinitionLink l) -> DefinitionLink <$> untransformLocationLink ds l) links))
+untransformDefinitionResult _ x@(InR (InR _)) = x
+
+untransformDeclarationResult :: Transformer tx => DocumentState tx -> (Declaration |? ([DeclarationLink] |? Null)) -> (Declaration |? ([DeclarationLink] |? Null))
+untransformDeclarationResult ds (InL (Declaration (InL loc))) = case untransformLocation ds loc of
+  Just loc' -> InL (Declaration (InL loc'))
+  Nothing -> InR (InR LSP.Null)
+untransformDeclarationResult ds (InL (Declaration (InR locs))) = InL (Declaration (InR (mapMaybe (untransformLocation ds) locs)))
+untransformDeclarationResult ds (InR (InL links)) = InR (InL (mapMaybe (\(DeclarationLink l) -> DeclarationLink <$> untransformLocationLink ds l) links))
+untransformDeclarationResult _ x@(InR (InR _)) = x
+
+-- | A token whose position doesn't map back is dropped; the rest keep their length, type and
+-- modifiers.
+untransformSemanticTokenData :: Transformer tx => tx -> [UInt] -> [UInt]
+untransformSemanticTokenData tx = encodeTokens . sort . mapMaybe move . decodeTokens
+  where
+    move (line, startChar, rest) = case untransformPosition tx (Position line startChar) of
+      Just (Position line' startChar') -> Just (line', startChar', rest)
+      Nothing -> Nothing
+
+    decodeTokens = go 0 0
+      where
+        go prevLine prevStart (deltaLine:deltaStart:len:tokenType:modifiers:more) =
+          (line, start, (len, tokenType, modifiers)) : go line start more
+          where
+            line = prevLine + deltaLine
+            start = if deltaLine == 0 then prevStart + deltaStart else deltaStart
+        go _ _ _ = []
+
+    encodeTokens = go 0 0
+      where
+        go _ _ [] = []
+        go prevLine prevStart ((line, start, (len, tokenType, modifiers)):more) =
+          deltaLine : deltaStart : len : tokenType : modifiers : go line start more
+          where
+            deltaLine = line - prevLine
+            deltaStart = if deltaLine == 0 then start - prevStart else start
 
 -- | A code action whose edit can't be mapped back to the notebook is dropped rather than
 -- offered to the client, which would then fail to apply it. Commands pass through: their
