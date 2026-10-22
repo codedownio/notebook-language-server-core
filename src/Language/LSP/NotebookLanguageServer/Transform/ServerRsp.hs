@@ -136,6 +136,21 @@ transformServerRsp' config SMethod_TextDocumentReferences initialParams result =
   whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
     return (over _L (mapMaybe (untransformLocation ds)) result)
 
+-- | Renaming answers with an edit over the shadow document; applying it to the notebook
+-- without this would put the new name on the wrong lines.
+transformServerRsp' config SMethod_TextDocumentRename initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
+    case result of
+      InR null -> return $ InR null
+      InL edit -> return $ case untransformWorkspaceEdit ds edit of
+        Just edit' -> InL edit'
+        Nothing -> InR LSP.Null
+
+-- | prepareRename answers with the range the name occupies, which the editor highlights.
+transformServerRsp' config SMethod_TextDocumentPrepareRename initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
+    return (untransformPrepareRename tx result)
+
 transformServerRsp' config SMethod_TextDocumentSelectionRange initialParams result =
   whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
     return (over _L (mapMaybe (untransformSelectionRange tx)) result)
@@ -181,6 +196,18 @@ transformServerRsp' config SMethod_CodeLensResolve initialParams result = case u
     return $ fromMaybe result (untransformRanged tx result)
 
 transformServerRsp' _ _ _ result = return result
+
+-- | A prepare-rename answer is the name's range, that range with a placeholder, or a bare
+-- "go ahead" with nothing to move.
+untransformPrepareRename :: Transformer tx => tx -> (PrepareRenameResult |? Null) -> (PrepareRenameResult |? Null)
+untransformPrepareRename _ x@(InR _) = x
+untransformPrepareRename tx (InL (PrepareRenameResult answer)) = case answer of
+  InL r -> wrap (InL <$> untransformRange tx r)
+  InR (InL withPlaceholder) -> wrap (InR . InL <$> untransformRanged tx withPlaceholder)
+  InR (InR defaultBehavior) -> InL (PrepareRenameResult (InR (InR defaultBehavior)))
+  where
+    wrap (Just moved) = InL (PrepareRenameResult moved)
+    wrap Nothing = InR LSP.Null
 
 -- | Both Definition and Declaration results come as a location, a list of them, a list of links,
 -- or null. A location that doesn't map back is dropped rather than pointing at nothing.
