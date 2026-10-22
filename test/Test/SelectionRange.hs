@@ -32,9 +32,14 @@ tests = describe "SelectionRange" $ do
       transformed <- runResponse answered
       transformed `shouldBe` InL [chain [3, 5, 8]]
 
-    it "drops a chain that doesn't map back into a cell" $ do
-      -- The outermost range covers the header line the transformer added
+    it "cuts the chain where it leaves the cell" $ do
+      -- The outermost range covers the header line the transformer added. Every chain reaches
+      -- it eventually, so dropping the chain for it would mean never answering at all.
       transformed <- runResponse (InL [chain [4, 0]])
+      transformed `shouldBe` InL [chain [3]]
+
+    it "drops a chain whose innermost range isn't in a cell" $ do
+      transformed <- runResponse (InL [chain [0]])
       transformed `shouldBe` InL []
 
     it "leaves null alone" $

@@ -68,11 +68,14 @@ untransformLocationLink (DocumentState {transformer=tx, origUri, newUri}) link
         & set originSelectionRange originSelectionRange'
   | otherwise = Just link
 
--- | A selection range is a chain, each one naming the wider range that contains it.
+-- | A selection range is a chain, each one naming the wider range that contains it. The widest
+-- are the wrapper the shadow document puts around the cells, which the notebook has nothing to
+-- correspond to, so the chain is cut where it leaves the cell rather than thrown away: expanding
+-- the selection should stop at the cell, not stop working.
 untransformSelectionRange :: Transformer tx => tx -> SelectionRange -> Maybe SelectionRange
-untransformSelectionRange tx (SelectionRange r parent) = SelectionRange
-  <$> untransformRange tx r
-  <*> traverse (untransformSelectionRange tx) parent
+untransformSelectionRange tx (SelectionRange r parent) = do
+  r' <- untransformRange tx r
+  return $ SelectionRange r' (parent >>= untransformSelectionRange tx)
 
 -- | Map a workspace edit from the shadow document back to the notebook.
 --
