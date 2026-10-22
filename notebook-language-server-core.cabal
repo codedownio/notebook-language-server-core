@@ -86,6 +86,7 @@ test-suite notebook-language-server-core-test
       Test.CodeLens
       Test.Formatting
       Test.Goto
+      Test.Rename
       Test.SelectionRange
       Test.SemanticTokens
       Test.WorkspaceEdit
