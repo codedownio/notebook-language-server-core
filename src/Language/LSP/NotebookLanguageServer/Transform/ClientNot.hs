@@ -132,4 +132,6 @@ transformClientNot' config _ SMethod_TextDocumentDidClose params = whenHandled (
   return $ params
          & set (textDocument . uri) newUri
 
-transformClientNot' _ _ _ params = return params
+transformClientNot' _ _ meth params = do
+  warnNoTransform "client notification" [i|#{meth}|]
+  return params

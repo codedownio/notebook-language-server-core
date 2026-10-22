@@ -47,4 +47,6 @@ transformServerReq' SMethod_WorkspaceApplyEdit params = case workspaceEditUri (p
         logWarnN [i|Couldn't map a workspace/applyEdit back to the notebook: #{A.encode (params ^. edit)}|]
         return params
 
-transformServerReq' _meth params = pure params
+transformServerReq' meth params = do
+  warnNoTransform "server request" [i|#{meth}|]
+  pure params

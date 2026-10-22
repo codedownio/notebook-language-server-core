@@ -180,7 +180,9 @@ transformServerRsp' config SMethod_CodeLensResolve initialParams result = case u
   Just (u, _) -> whenHandled' (notebookConfigHandles config) u result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
     return $ fromMaybe result (untransformRanged tx result)
 
-transformServerRsp' _ _ _ result = return result
+transformServerRsp' _ meth _ result = do
+  warnNoTransform "server response to" [i|#{meth}|]
+  return result
 
 -- | Both Definition and Declaration results come as a location, a list of them, a list of links,
 -- or null. A location that doesn't map back is dropped rather than pointing at nothing.

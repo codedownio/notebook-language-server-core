@@ -35,4 +35,6 @@ transformServerNot' SMethod_TextDocumentPublishDiagnostics params = whenReverseL
          & set uri origUri
          & over diagnostics (mapMaybe (traverseOf range (untransformRange tx)))
 
-transformServerNot' _meth msg = pure msg
+transformServerNot' meth msg = do
+  warnNoTransform "server notification" [i|#{meth}|]
+  pure msg

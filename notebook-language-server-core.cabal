@@ -88,6 +88,7 @@ test-suite notebook-language-server-core-test
       Test.Goto
       Test.SelectionRange
       Test.SemanticTokens
+      Test.Untranslated
       Test.WorkspaceEdit
       TestLib.Config
       TestLib.Transformers

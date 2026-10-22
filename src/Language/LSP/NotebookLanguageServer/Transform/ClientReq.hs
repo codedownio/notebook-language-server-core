@@ -80,7 +80,9 @@ transformClientReq' config (SMethod_CustomMethod p) val
             return $ A.toJSON $ TextDocumentIdentifier newUri
   | otherwise = return val
 
-transformClientReq' _ _ params = return params
+transformClientReq' _ meth params = do
+  warnNoTransform "client request" [i|#{meth}|]
+  return params
 
 
 doTransformUriAndPosition :: forall m n a tx. (

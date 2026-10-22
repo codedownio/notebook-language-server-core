@@ -27,4 +27,6 @@ transformClientRsp meth msg = do
 
 
 transformClientRsp' :: (TransformerMonad tx n, Transformer tx) => ClientRspMethod m -> TResponseMessage m -> n (TResponseMessage m)
-transformClientRsp' _meth msg = pure msg
+transformClientRsp' meth msg = do
+  warnNoTransform "client response" [i|#{meth}|]
+  pure msg

@@ -18,6 +18,7 @@ import qualified Data.Char as C
 import Data.Function
 import qualified Data.List as L
 import qualified Data.Map as M
+import qualified Data.Set as S
 import Data.String.Interpolate
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -96,7 +97,29 @@ data TransformerState tx = TransformerState {
   transformerDocuments :: MVar (M.Map Text (DocumentState tx))
   , transformerInitializeParams :: MVar (Maybe InitializeParams)
   , transformerInitializeResult :: MVar (Maybe InitializeResult)
+  -- | Methods 'warnNoTransform' has already spoken up about
+  , transformerUnhandled :: MVar (S.Set Text)
   }
+
+-- * Catching a missing transform
+
+-- | Reaching a transform table's catch-all means no arm claimed the method, so whatever it
+-- names goes past untranslated: the wrapped server is handed the notebook's path, or the client
+-- the shadow document's. Either way it surfaces at the far end, as a confusing @file not
+-- found@, rather than here where the arm is missing.
+--
+-- Plenty of methods belong in the catch-all -- they name no document and have nothing to
+-- translate -- so this says it once per method and then keeps quiet, which makes the log worth
+-- reading without having to list every method that is fine.
+warnNoTransform :: TransformerMonad tx n => Text -> Text -> n ()
+warnNoTransform kind method = do
+  TransformerState {transformerUnhandled} <- ask
+  modifyMVar_ transformerUnhandled $ \seen -> case S.member key seen of
+    True -> return seen
+    False -> do
+      logWarnN [i|No transform for #{kind} #{method}. If it names a document, the far side will be given one it doesn't know about.|]
+      return (S.insert key seen)
+  where key = kind <> " " <> method
 
 -- * Transformers
 
@@ -105,6 +128,7 @@ newTransformerState = TransformerState
   <$> newMVar mempty
   <*> newMVar Nothing
   <*> newMVar Nothing
+  <*> newMVar mempty
 
 lookupTransformer :: (TransformerMonad tx m, Transformer tx) => Uri -> m (Maybe (DocumentState tx))
 lookupTransformer uri = do

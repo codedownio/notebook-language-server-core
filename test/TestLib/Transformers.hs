@@ -55,6 +55,7 @@ transformerStateWith ds = TransformerState
   <$> newMVar (M.singleton (getUri (origUri ds)) ds)
   <*> newMVar Nothing
   <*> newMVar Nothing
+  <*> newMVar mempty
 
 notebookUri :: Uri
 notebookUri = Uri "file:///home/main.ipynb"
