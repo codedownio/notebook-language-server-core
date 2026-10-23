@@ -185,6 +185,28 @@ transformServerRsp' _ SMethod_CodeActionResolve _initialParams result = case res
           logWarnN [i|Dropping the edit on resolved code action "#{result ^. title}": it doesn't map back to the notebook|]
           return $ set edit Nothing result
 
+-- | A workspace query names no document, so a hit is put back by the shadow uri it carries
+-- rather than one the request told us. An answer can span several shadow documents, so each hit
+-- is looked up on its own.
+transformServerRsp' config SMethod_WorkspaceSymbol _initialParams result = case result of
+  InR (InR LSP.Null) -> return $ InR $ InR LSP.Null
+  InL symbolInformations -> (InL . catMaybes) <$> mapM untransform (keep symbolInformations)
+  InR (InL workspaceSymbols) -> (InR . InL . catMaybes) <$> mapM untransformWorkspaceSymbol (keep workspaceSymbols)
+  where
+    -- The wrapper's own symbols are no more worth listing here than in a document's outline
+    keep :: HasName a Text => [a] -> [a]
+    keep = filter (not . notebookConfigIgnoreSymbol config . (^. name))
+
+    untransform si = whenReverseLookupUri' (si ^. location . uri) (Just si) $ \ds ->
+      return $ (\loc -> set location loc si) <$> untransformLocation ds (si ^. location)
+
+    -- A workspace symbol gives a location, or just the file it lives in, which has no range
+    untransformWorkspaceSymbol ws = case ws ^. location of
+      InL loc -> whenReverseLookupUri' (loc ^. uri) (Just ws) $ \ds ->
+        return $ (\loc' -> set location (InL loc') ws) <$> untransformLocation ds loc
+      InR uriOnly -> whenReverseLookupUri' (uriOnly ^. uri) (Just ws) $ \(DocumentState {origUri}) ->
+        return $ Just (set (location . _R . uri) origUri ws)
+
 transformServerRsp' _ SMethod_TextDocumentCodeLens _initialParams (InR null) = return $ InR null
 transformServerRsp' config SMethod_TextDocumentCodeLens initialParams (InL result) = (InL <$>) $
   whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx, origUri}) -> do
