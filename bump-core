@@ -2,8 +2,8 @@
 
 """Rewrite the notebook-language-server-core pin in every proxy's stack file(s).
 
-A core bump touches ten stack files: one each in rust, cpp and go, and seven in hnls. Run this
-from the core checkout; the proxies are expected to be siblings of it.
+A core bump touches ten stack files: one each in rust, cpp, go and java, and six in hnls. Run
+this from the core checkout; the proxies are expected to be siblings of it.
 """
 
 import argparse
@@ -17,6 +17,7 @@ REPOS = [
     "cpp-notebook-language-server",
     "go-notebook-language-server",
     "haskell-notebook-language-server",
+    "java-notebook-language-server",
 ]
 
 PIN = re.compile(
