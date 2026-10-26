@@ -52,6 +52,10 @@ isNotebook uri = case parseURIReference (T.unpack (getUri uri)) of
   Nothing -> False
   Just (URI {..}) -> ".ipynb" `L.isSuffixOf` fmap C.toLower uriPath
 
+-- | Same document, however each side escaped the path: jdtls unescapes what we send it.
+sameDocument :: Uri -> Uri -> Bool
+sameDocument a b = toNormalizedUri a == toNormalizedUri b
+
 -- * whenNotebookResult
 
 whenReverseLookupUri :: (TransformerMonad tx n, Transformer tx, MonadLoggerIO n, HasUri a Uri) => a -> (DocumentState tx -> n a) -> n a
@@ -66,7 +70,7 @@ whenReverseLookupUri' uri params cb = do
   flip fix (M.toList txDocuments) $ \loop items -> case items of
     [] -> return params
     ((_, ds@(DocumentState {..})):rest) ->
-      if | newUri == uri -> cb ds
+      if | sameDocument newUri uri -> cb ds
          | otherwise -> loop rest
 
 -- * TransformerMonad
