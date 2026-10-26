@@ -84,6 +84,7 @@ test-suite notebook-language-server-core-test
       Test.ApplyEdit
       Test.CodeAction
       Test.CodeLens
+      Test.DidOpen
       Test.Formatting
       Test.Goto
       Test.Rename
@@ -92,6 +93,7 @@ test-suite notebook-language-server-core-test
       Test.WorkspaceEdit
       Test.WorkspaceSymbol
       TestLib.Config
+      TestLib.Folder
       TestLib.Transformers
       Paths_notebook_language_server_core
   autogen-modules:
@@ -120,6 +122,7 @@ test-suite notebook-language-server-core-test
       aeson
     , base >=4.7 && <5
     , containers
+    , filepath
     , lsp-types >=2.0.0.1
     , monad-logger
     , mtl

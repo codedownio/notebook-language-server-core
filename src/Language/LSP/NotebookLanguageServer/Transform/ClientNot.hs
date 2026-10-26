@@ -19,15 +19,14 @@ import Data.String.Interpolate
 import qualified Data.Text.Rope as Rope
 import Data.Time
 import qualified Data.UUID.V4 as UUID
+import Language.LSP.NotebookLanguageServer.Config
+import Language.LSP.NotebookLanguageServer.Transform.ClientNot.DidSave
+import Language.LSP.NotebookLanguageServer.Transform.Util
 import Language.LSP.Protocol.Lens as Lens
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import Language.LSP.Transformer
-import Language.LSP.NotebookLanguageServer.Transform.ClientNot.DidSave
-import Language.LSP.NotebookLanguageServer.Transform.Util
 import UnliftIO.Concurrent
-import UnliftIO.Directory
-import Language.LSP.NotebookLanguageServer.Config
 
 
 type ClientNotMethod m = SMethod (m :: Method 'ClientToServer 'Notification)
@@ -83,8 +82,7 @@ transformClientNot' config sendExtraNotification SMethod_TextDocumentDidOpen par
           , debounceEdge = trailingEdge
           })
 
-  modifyMVar_ transformerDocuments $ \x -> return $! M.insert (getUri u) (
-    DocumentState {
+  let documentState = DocumentState {
         transformer = transformer'
         , curLines = ls
         , curLines' = ls'
@@ -94,7 +92,12 @@ transformClientNot' config sendExtraNotification SMethod_TextDocumentDidOpen par
         , referenceRegex = referenceRegex
         , documentUuid = uuid
         , debouncedDidChange = debouncedDidChange
-        }) x
+        }
+
+  modifyMVar_ transformerDocuments $ \x -> return $! M.insert (getUri u) documentState x
+
+  -- Before the server hears about the document
+  when (isJust (notebookConfigDidSaveDebounceMs config)) $ writeShadowDocument documentState
 
   notebookConfigOnDocumentsChanged config
 
@@ -124,8 +127,8 @@ transformClientNot' config _ SMethod_TextDocumentDidClose params = whenHandled (
   TransformerState {..} <- ask
   maybeDocumentState <- modifyMVar transformerDocuments (return . flipTuple . M.updateLookupWithKey (\_ _ -> Nothing) (getUri u))
   newUri <- case maybeDocumentState of
-    Just (DocumentState {..}) -> do
-      when (isJust (notebookConfigDidSaveDebounceMs config)) $ removePathForcibly newPath
+    Just ds@(DocumentState {..}) -> do
+      when (isJust (notebookConfigDidSaveDebounceMs config)) $ removeShadowDocument ds
       pure newUri
     Nothing -> notebookConfigUnopenedUri config u
   notebookConfigOnDocumentsChanged config

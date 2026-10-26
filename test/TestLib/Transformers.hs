@@ -14,6 +14,7 @@ module TestLib.Transformers (
   , shadowUri
   ) where
 
+import Control.Monad.IO.Class
 import qualified Data.Map as M
 import qualified Data.UUID as UUID
 import Language.LSP.NotebookLanguageServer.Transform.Util
@@ -33,6 +34,9 @@ instance Transformer LineShift where
   untransformPosition (LineShift n) (Position l c)
     | l >= n = Just (Position (l - n) c)
     | otherwise = Nothing
+
+instance MonadIO m => ProjectIn m LineShift where
+  project n doc = pure (listToDoc (replicate (fromIntegral n) "" <> docToList doc), LineShift n, Right ())
 
 -- | The document contents are empty: nothing that untransforms a position reads them.
 documentState :: tx -> DocumentState tx
