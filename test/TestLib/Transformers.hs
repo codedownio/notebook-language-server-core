@@ -17,10 +17,10 @@ module TestLib.Transformers (
 import Control.Monad.IO.Class
 import qualified Data.Map as M
 import qualified Data.UUID as UUID
+import Language.LSP.NotebookLanguageServer.Transform.ServerRsp.Hover (mkDocRegex)
 import Language.LSP.NotebookLanguageServer.Transform.Util
 import Language.LSP.Protocol.Types
 import Language.LSP.Transformer
-import Text.Regex.PCRE.Light (compile)
 import UnliftIO.MVar
 
 
@@ -47,7 +47,7 @@ documentState tx = DocumentState {
   , origUri = notebookUri
   , newUri = shadowUri
   , newPath = "/home/main.ipynb.hs"
-  , referenceRegex = compile "main\\.ipynb\\.hs" []
+  , referenceRegex = mkDocRegex "/home/main.ipynb.hs"
   , documentUuid = UUID.nil
   , debouncedDidChange = return ()
   }

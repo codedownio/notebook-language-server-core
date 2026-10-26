@@ -87,6 +87,7 @@ test-suite notebook-language-server-core-test
       Test.DidOpen
       Test.Formatting
       Test.Goto
+      Test.Hover
       Test.Rename
       Test.SelectionRange
       Test.SemanticTokens
