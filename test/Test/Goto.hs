@@ -8,6 +8,7 @@ module Test.Goto (tests, main) where
 import Control.Monad.Logger
 import Control.Monad.Reader
 import Language.LSP.NotebookLanguageServer.Transform.ServerRsp
+import Language.LSP.NotebookLanguageServer.Transform.Util (DocumentState(..))
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import Test.Sandwich
@@ -43,6 +44,12 @@ tests = describe "Goto" $ do
     it "leaves null alone" $
       runDefinition (InR (InR Null)) >>= (`shouldBe` InR (InR Null))
 
+    it "matches the shadow document however the server escaped its path" $ do
+      let ds = (documentState (LineShift 1)) { newUri = Uri "file:///home/a%20%28b%29/main.hs" }
+      transformed <- liftIO $ runWith ds SMethod_TextDocumentDefinition (positionParams 7)
+                       (InL (Definition (InL (location (Uri "file:///home/a (b)/main.hs") 8))))
+      transformed `shouldBe` InL (Definition (InL (location notebookUri 7)))
+
   describe "textDocument/implementation" $
     it "puts two implementations back on the notebook" $ do
       let answered = InR (InL [DefinitionLink (link shadowUri 8 9), DefinitionLink (link shadowUri 12 13)])
@@ -51,8 +58,12 @@ tests = describe "Goto" $ do
 
 run :: (Show (MessageResult m))
   => SMethod (m :: Method 'ClientToServer 'Request) -> MessageParams m -> MessageResult m -> IO (MessageResult m)
-run method params result = do
-  state <- transformerStateWith (documentState (LineShift 1))
+run = runWith (documentState (LineShift 1))
+
+runWith :: (Show (MessageResult m)) => DocumentState LineShift
+  -> SMethod (m :: Method 'ClientToServer 'Request) -> MessageParams m -> MessageResult m -> IO (MessageResult m)
+runWith ds method params result = do
+  state <- transformerStateWith ds
   runNoLoggingT $ runReaderT (transformServerRsp' testConfig method params result) state
 
 runDefinition :: MonadIO m => MessageResult Method_TextDocumentDefinition -> m (MessageResult Method_TextDocumentDefinition)

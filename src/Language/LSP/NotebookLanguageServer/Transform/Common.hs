@@ -52,12 +52,12 @@ untransformInlayHint tx hint =
 -- document we shadow is left alone: it's a real file the client can open for itself.
 untransformLocation :: Transformer tx => DocumentState tx -> Location -> Maybe Location
 untransformLocation (DocumentState {transformer=tx, origUri, newUri}) loc
-  | loc ^. uri == newUri = set uri origUri <$> untransformRanged tx loc
+  | sameDocument (loc ^. uri) newUri = set uri origUri <$> untransformRanged tx loc
   | otherwise = Just loc
 
 untransformLocationLink :: Transformer tx => DocumentState tx -> LocationLink -> Maybe LocationLink
 untransformLocationLink (DocumentState {transformer=tx, origUri, newUri}) link
-  | link ^. targetUri == newUri = do
+  | sameDocument (link ^. targetUri) newUri = do
       targetRange' <- untransformRange tx (link ^. targetRange)
       targetSelectionRange' <- untransformRange tx (link ^. targetSelectionRange)
       originSelectionRange' <- traverse (untransformRange tx) (link ^. originSelectionRange)
@@ -93,14 +93,14 @@ untransformWorkspaceEdit (DocumentState {transformer=tx, origUri, newUri}) (Work
     untransformChanges = fmap M.fromList . traverse untransformEntry . M.toList
 
     untransformEntry (u, edits)
-      | u == newUri = (origUri, ) <$> traverse (untransformRanged tx) edits
+      | sameDocument u newUri = (origUri, ) <$> traverse (untransformRanged tx) edits
       | otherwise = Nothing
 
     untransformDocumentChange (InL textDocumentEdit) = InL <$> untransformTextDocumentEdit textDocumentEdit
     untransformDocumentChange (InR _fileOperation) = Nothing
 
     untransformTextDocumentEdit (TextDocumentEdit (OptionalVersionedTextDocumentIdentifier u _version) edits)
-      | u == newUri = TextDocumentEdit (OptionalVersionedTextDocumentIdentifier origUri (InR Null))
+      | sameDocument u newUri = TextDocumentEdit (OptionalVersionedTextDocumentIdentifier origUri (InR Null))
                         <$> traverse untransformEdit edits
       | otherwise = Nothing
 
