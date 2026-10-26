@@ -7,9 +7,7 @@ module TestLib.Config (
   ) where
 
 import Language.LSP.NotebookLanguageServer.Config
-import Language.LSP.Protocol.Types
-import Language.LSP.Transformer
-import Text.Regex.PCRE.Light (compile)
+import Language.LSP.NotebookLanguageServer.Transform.ServerRsp.Hover (mkDocRegex)
 import TestLib.Transformers
 
 
@@ -19,7 +17,7 @@ testConfig = NotebookConfig {
   , notebookConfigDidSaveDebounceMs = Nothing
   , notebookConfigHandlesFormatting = True
   , notebookConfigTransformerParamsFor = const 1
-  , notebookConfigMakeShadowDocument = \_ _ -> return (shadowUri, "/home/main.ipynb.hs", compile "main\\.ipynb\\.hs" [])
+  , notebookConfigMakeShadowDocument = \_ _ -> return (shadowUri, "/home/main.ipynb.hs", mkDocRegex "/home/main.ipynb.hs")
   , notebookConfigUnopenedUri = return
   , notebookConfigOnDocumentsChanged = return ()
   , notebookConfigTransformInitialize = return
