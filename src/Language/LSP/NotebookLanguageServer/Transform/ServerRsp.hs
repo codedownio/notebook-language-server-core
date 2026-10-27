@@ -135,6 +135,27 @@ transformServerRsp' config SMethod_TextDocumentReferences initialParams result =
   whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
     return (over _L (mapMaybe (untransformLocation ds)) result)
 
+-- | A hierarchy answer names the shadow document, and a follow-up on an item we didn't put back
+-- would ask about a file the client never opened.
+transformServerRsp' config SMethod_TextDocumentPrepareCallHierarchy initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
+    return (over _L (mapMaybe (untransformHierarchyItem ds)) result)
+transformServerRsp' config SMethod_TextDocumentPrepareTypeHierarchy initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
+    return (over _L (mapMaybe (untransformHierarchyItem ds)) result)
+transformServerRsp' config SMethod_CallHierarchyIncomingCalls initialParams result =
+  whenHandledByItem (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
+    return (over _L (mapMaybe (untransformIncomingCall ds)) result)
+transformServerRsp' config SMethod_CallHierarchyOutgoingCalls initialParams result =
+  whenHandledByItem (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
+    return (over _L (mapMaybe (untransformOutgoingCall ds)) result)
+transformServerRsp' config SMethod_TypeHierarchySupertypes initialParams result =
+  whenHandledByItem (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
+    return (over _L (mapMaybe (untransformHierarchyItem ds)) result)
+transformServerRsp' config SMethod_TypeHierarchySubtypes initialParams result =
+  whenHandledByItem (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
+    return (over _L (mapMaybe (untransformHierarchyItem ds)) result)
+
 -- | Renaming answers with an edit over the shadow document; applying it to the notebook
 -- without this would put the new name on the wrong lines.
 transformServerRsp' config SMethod_TextDocumentRename initialParams result =

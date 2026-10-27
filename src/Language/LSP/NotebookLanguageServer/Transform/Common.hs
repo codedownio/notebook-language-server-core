@@ -69,6 +69,45 @@ untransformInlayHint tx hint =
     & traverseOf position (untransformPosition tx)
     & fmap (over (textEdits . _Just) (mapMaybe (untransformRanged tx)))
 
+-- | A hierarchy item the client is handing back, in the shadow document's terms. An item from
+-- some other file goes out as it came in.
+transformHierarchyItem :: (
+  Transformer tx, HasUri a Uri, HasRange a Range, HasSelectionRange a Range
+  ) => DocumentState tx -> a -> Maybe a
+transformHierarchyItem (DocumentState {transformer=tx, origUri, newUri}) x
+  | sameDocument (x ^. uri) origUri = do
+      range' <- transformRange tx (x ^. range)
+      selectionRange' <- transformRange tx (x ^. selectionRange)
+      return $ x & set uri newUri & set range range' & set selectionRange selectionRange'
+  | otherwise = Just x
+
+-- | A hierarchy item the server answered with, back in the notebook's terms.
+untransformHierarchyItem :: (
+  Transformer tx, HasUri a Uri, HasRange a Range, HasSelectionRange a Range
+  ) => DocumentState tx -> a -> Maybe a
+untransformHierarchyItem (DocumentState {transformer=tx, origUri, newUri}) x
+  | sameDocument (x ^. uri) newUri = do
+      range' <- untransformRange tx (x ^. range)
+      selectionRange' <- untransformRange tx (x ^. selectionRange)
+      return $ x & set uri origUri & set range range' & set selectionRange selectionRange'
+  | otherwise = Just x
+
+-- | An incoming call names the caller and where inside it the calls are, so those ranges belong
+-- to the caller's own document.
+untransformIncomingCall :: Transformer tx => DocumentState tx -> CallHierarchyIncomingCall -> Maybe CallHierarchyIncomingCall
+untransformIncomingCall ds@(DocumentState {transformer=tx, newUri}) call = do
+  from' <- untransformHierarchyItem ds (call ^. Lens.from)
+  let ranges | sameDocument (call ^. Lens.from . uri) newUri = mapMaybe (untransformRange tx) (call ^. fromRanges)
+             | otherwise = call ^. fromRanges
+  return $ call & set Lens.from from' & set fromRanges ranges
+
+-- | An outgoing call's ranges are where the call is written, which is the document the client
+-- asked about.
+untransformOutgoingCall :: Transformer tx => DocumentState tx -> CallHierarchyOutgoingCall -> Maybe CallHierarchyOutgoingCall
+untransformOutgoingCall ds@(DocumentState {transformer=tx}) call = do
+  to' <- untransformHierarchyItem ds (call ^. Lens.to)
+  return $ call & set Lens.to to' & set fromRanges (mapMaybe (untransformRange tx) (call ^. fromRanges))
+
 -- | A location the server answered with, back in the notebook's terms. Anything outside the
 -- document we shadow is left alone: it's a real file the client can open for itself.
 untransformLocation :: Transformer tx => DocumentState tx -> Location -> Maybe Location
