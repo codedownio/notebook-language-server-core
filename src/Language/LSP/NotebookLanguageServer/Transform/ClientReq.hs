@@ -68,6 +68,12 @@ transformClientReq' config SMethod_TextDocumentInlayHint params = whenHandled (n
 transformClientReq' config SMethod_TextDocumentOnTypeFormatting params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
 transformClientReq' config SMethod_TextDocumentTypeDefinition params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
 transformClientReq' config SMethod_TextDocumentDeclaration params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
+transformClientReq' config SMethod_TextDocumentPrepareCallHierarchy params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
+transformClientReq' config SMethod_TextDocumentPrepareTypeHierarchy params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
+transformClientReq' config SMethod_CallHierarchyIncomingCalls params = doTransformHierarchyItem config params
+transformClientReq' config SMethod_CallHierarchyOutgoingCalls params = doTransformHierarchyItem config params
+transformClientReq' config SMethod_TypeHierarchySupertypes params = doTransformHierarchyItem config params
+transformClientReq' config SMethod_TypeHierarchySubtypes params = doTransformHierarchyItem config params
 transformClientReq' config SMethod_TextDocumentReferences params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
 transformClientReq' config SMethod_TextDocumentSignatureHelp params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
 transformClientReq' config SMethod_TextDocumentRename params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
@@ -87,6 +93,20 @@ transformClientReq' config (SMethod_CustomMethod p) val
 
 transformClientReq' _ _ params = return params
 
+
+-- | A follow-up carries the item the client was given rather than a text document, so the
+-- document it belongs to is the item's own uri.
+doTransformHierarchyItem :: forall n a p tx. (
+  TransformerMonad tx n, Transformer tx, HasItem p a, HasUri a Uri, HasRange a Range, HasSelectionRange a Range
+  ) => NotebookConfig tx -> p -> n p
+doTransformHierarchyItem config params =
+  whenHandled' (notebookConfigHandles config) (params ^. (item . uri)) params $ withTransformer params $ \ds ->
+    case transformHierarchyItem ds (params ^. item) of
+      Nothing -> do
+        let u = params ^. (item . uri)
+        logWarnN [i|Couldn't transform hierarchy item #{u}|]
+        return params
+      Just item' -> return $ set item item' params
 
 doTransformUriAndPosition :: forall m n a tx. (
   TransformerMonad tx n, Transformer tx, HasPosition (MessageParams m) Position, HasTextDocument (MessageParams m) a, HasUri a Uri

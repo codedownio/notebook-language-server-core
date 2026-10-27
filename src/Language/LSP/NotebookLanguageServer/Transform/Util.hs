@@ -42,6 +42,9 @@ whenHandled handles params = whenHandled' handles (params ^. (textDocument . uri
 whenHandledByInitialParams :: (MonadLoggerIO n, HasTextDocument a b, HasUri b Uri) => (Uri -> Bool) -> a -> c -> (Uri -> n c) -> n c
 whenHandledByInitialParams handles params = whenHandled' handles (params ^. (textDocument . uri))
 
+whenHandledByItem :: (MonadLoggerIO n, HasItem a b, HasUri b Uri) => (Uri -> Bool) -> a -> c -> (Uri -> n c) -> n c
+whenHandledByItem handles params = whenHandled' handles (params ^. (item . uri))
+
 whenHandled' :: (MonadLoggerIO n) => (Uri -> Bool) -> Uri -> a -> (Uri -> n a) -> n a
 whenHandled' handles uri params action = if
   | handles uri -> action uri
