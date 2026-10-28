@@ -1,0 +1,26 @@
+name: ci
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: tests
+    runs-on: [self-hosted, Linux, desktop]
+    strategy:
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Run tests
+      run: |
+        nix develop -c stack test --ta '--print'
+
+    - name: Upload test logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-runs
+        path: test_runs/
