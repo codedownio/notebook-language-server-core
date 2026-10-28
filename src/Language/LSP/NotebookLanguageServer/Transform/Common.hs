@@ -3,10 +3,11 @@
 module Language.LSP.NotebookLanguageServer.Transform.Common where
 
 import Control.Applicative
-import Control.Lens hiding (List)
+import Control.Lens hiding (List, children)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Map as M
+import Data.Text (Text)
 import Data.Maybe
 import Language.LSP.NotebookLanguageServer.Transform.Util
 import Language.LSP.Transformer
@@ -38,6 +39,26 @@ untransformRangedMaybe :: (Transformer tx, HasRange a (Maybe Range)) => tx -> a 
 untransformRangedMaybe tx x = x
   & traverseOf (range . _Just . start) (untransformPosition tx)
   >>= traverseOf (range . _Just . end) (untransformPosition tx)
+
+-- | A document outline, back in the notebook's terms.
+--
+-- The tree is the projection's, so its upper levels are whatever scaffolding the language
+-- needed -- jnls wraps every cell in a @class __Cells@, gnls in a @func _notebookExec@.
+-- Those nodes span synthetic lines and don't untransform, but the cell's own symbols hang
+-- off them, so a node we can't place is replaced by its children rather than dropped with
+-- them. A node the language asks us to ignore goes with its children, which is the point of
+-- ignoring it.
+untransformDocumentSymbols :: Transformer tx => (Text -> Bool) -> tx -> [DocumentSymbol] -> [DocumentSymbol]
+untransformDocumentSymbols ignoreSymbol tx = concatMap go
+  where
+    go sym
+      | ignoreSymbol (sym ^. name) = []
+      | otherwise = case placed of
+          Nothing -> kids
+          Just sym' -> [sym' & set children (if null kids then Nothing else Just kids)]
+      where
+        placed = untransformRanged tx sym >>= traverseOf selectionRange (untransformRange tx)
+        kids = untransformDocumentSymbols ignoreSymbol tx (fromMaybe [] (sym ^. children))
 
 -- | An inlay hint sits at a position rather than over a range, and carries its own edits for
 -- when the user accepts it. Drop the hint if its position isn't in the cell; drop individual

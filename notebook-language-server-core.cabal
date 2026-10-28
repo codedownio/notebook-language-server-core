@@ -85,6 +85,7 @@ test-suite notebook-language-server-core-test
       Test.CodeAction
       Test.CodeLens
       Test.DidOpen
+      Test.DocumentSymbol
       Test.Formatting
       Test.Goto
       Test.Hover

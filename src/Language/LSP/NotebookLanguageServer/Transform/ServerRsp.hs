@@ -110,9 +110,8 @@ transformServerRsp' config SMethod_TextDocumentDocumentSymbol initialParams resu
     case result of
       InL symbolInformations -> return $ InL (symbolInformations & filter (not . ignoreSymbol)
                                                                  & mapMaybe (traverseOf (location . range) (untransformRange tx)))
-      InR (InL documentSymbols) -> return $ InR $ InL $ (documentSymbols & filter (not . ignoreSymbol)
-                                                                         & mapMaybe (traverseOf range (untransformRange tx))
-                                                                         & mapMaybe (traverseOf selectionRange (untransformRange tx)))
+      InR (InL documentSymbols) ->
+        return $ InR $ InL $ untransformDocumentSymbols (notebookConfigIgnoreSymbol config) tx documentSymbols
       InR (InR LSP.Null) -> return $ InR $ InR LSP.Null
   where
     ignoreSymbol :: HasName a Text => a -> Bool
