@@ -7,16 +7,19 @@ on:
 jobs:
   tests:
     name: tests
-    runs-on: [self-hosted, Linux, desktop]
+    runs-on: arc-public-medium
     strategy:
       fail-fast: false
 
     steps:
     - uses: actions/checkout@v6
 
+    - uses: ./.github/actions/arc_env
+
     - name: Run tests
       run: |
-        nix develop -c stack test --ta '--print'
+        TESTS=$(nix build --no-link --print-out-paths .#tests)/bin/notebook-language-server-core-test
+        "$TESTS" --print
 
     - name: Upload test logs
       if: always()
@@ -24,3 +27,18 @@ jobs:
       with:
         name: test-runs
         path: test_runs/
+
+  nix:
+    name: Nix
+    runs-on: arc-public-small
+    strategy:
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - uses: ./.github/actions/arc_env
+
+    - name: Build
+      run: |
+        nix build
