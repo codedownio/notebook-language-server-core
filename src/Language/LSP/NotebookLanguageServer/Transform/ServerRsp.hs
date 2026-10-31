@@ -12,6 +12,8 @@ import Control.Monad.Logger
 import Control.Monad.Reader
 import Data.Aeson as A
 import Data.List (sort)
+import Data.Map (Map)
+import qualified Data.Map as M
 import Data.Maybe
 import Data.Text (Text)
 import Data.String.Interpolate
@@ -186,6 +188,19 @@ transformServerRsp' config SMethod_TextDocumentSemanticTokensRange initialParams
   whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
     return (over (_L . Lens.data_) (untransformSemanticTokenData tx) result)
 
+-- | A pulled report carries the same diagnostics the push notification would, so it needs the
+-- same moving. The related documents it may come with are keyed by uri, and one of those keys
+-- can be a shadow document.
+transformServerRsp' config SMethod_TextDocumentDiagnostic initialParams (DocumentDiagnosticReport report) =
+  DocumentDiagnosticReport <$> case report of
+    InL full -> InL <$> (untransformFull full >>= traverseOf (relatedDocuments . _Just) untransformRelatedDocuments)
+    InR unchanged -> InR <$> traverseOf (relatedDocuments . _Just) untransformRelatedDocuments unchanged
+  where
+
+    untransformFull full =
+      whenHandledByInitialParams (notebookConfigHandles config) initialParams full $ withTransformer full $ \(DocumentState {transformer=tx}) ->
+        return $ over items (mapMaybe (traverseOf range (untransformRange tx))) full
+
 transformServerRsp' _ SMethod_TextDocumentCodeAction _initialParams (InR null) = return $ InR null
 transformServerRsp' config SMethod_TextDocumentCodeAction initialParams (InL result) = (InL <$>) $
   whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \ds ->
@@ -238,6 +253,16 @@ transformServerRsp' config SMethod_CodeLensResolve initialParams result = case u
     return $ fromMaybe result (untransformRanged tx result)
 
 transformServerRsp' _ _ _ result = return result
+
+-- | A report's related documents are keyed by uri, so a key naming a shadow document has to go
+-- back to the notebook it stands for, diagnostics and all. Keys we aren't shadowing are left be.
+untransformRelatedDocuments :: (TransformerMonad tx n, Transformer tx) => RelatedDocuments -> n RelatedDocuments
+untransformRelatedDocuments = fmap M.fromList . mapM untransformOne . M.toList
+  where
+    untransformOne (u, report) = whenReverseLookupUri' u (u, report) $ \(DocumentState {transformer=tx, origUri}) ->
+      return (origUri, over (_L . items) (mapMaybe (traverseOf range (untransformRange tx))) report)
+
+type RelatedDocuments = Map Uri (FullDocumentDiagnosticReport |? UnchangedDocumentDiagnosticReport)
 
 -- | A prepare-rename answer is the name's range, that range with a placeholder, or a bare
 -- "go ahead" with nothing to move.
