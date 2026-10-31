@@ -57,6 +57,7 @@ transformClientReq' config SMethod_CodeLensResolve params = case unstampLensData
       Just r -> return $ set range r params'
 transformClientReq' config SMethod_TextDocumentCompletion params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
 transformClientReq' config SMethod_TextDocumentDefinition params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
+transformClientReq' config SMethod_TextDocumentDiagnostic params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUri @m params
 transformClientReq' config SMethod_TextDocumentDocumentHighlight params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
 transformClientReq' config SMethod_TextDocumentDocumentSymbol params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUri @m params
 transformClientReq' config SMethod_TextDocumentFormatting params
