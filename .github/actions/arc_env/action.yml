@@ -1,9 +1,4 @@
 name: "ARC environment"
-description: >
-  The nix environment the systemd runners got from their unit: a GITHUB_TOKEN so
-  github: fetches aren't rate-limited (the fleet shares one IP), and NIX_PATH,
-  which the test harness needs for `nix build --impure --expr` over <nixpkgs>.
-
 runs:
   using: "composite"
   steps:
