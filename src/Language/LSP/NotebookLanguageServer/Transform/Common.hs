@@ -177,17 +177,17 @@ workspaceEditUri (WorkspaceEdit changes documentChanges _changeAnnotations) =
     documentChangeUris (InL (TextDocumentEdit ident _edits)) = [ident ^. uri]
     documentChangeUris (InR _fileOperation) = []
 
--- * Code lens data
+-- * Resolve data
 
--- | codeLens/resolve carries no text document, so the notebook a lens came from rides along in
--- the lens's @data@ next to whatever the server put there.
-stampLensData :: Uri -> CodeLens -> CodeLens
-stampLensData u lens = lens & set data_ (Just (A.object ["nls_uri" A..= u, "nls_data" A..= (lens ^. data_)]))
+-- | A resolve request (codeLens/resolve, documentLink/resolve) carries no text document, so the
+-- notebook an item came from rides along in its @data@ next to whatever the server put there.
+stampNotebookData :: HasData_ a (Maybe A.Value) => Uri -> a -> a
+stampNotebookData u x = x & set data_ (Just (A.object ["nls_uri" A..= u, "nls_data" A..= (x ^. data_)]))
 
-unstampLensData :: CodeLens -> Maybe (Uri, CodeLens)
-unstampLensData lens = case lens ^. data_ of
+unstampNotebookData :: HasData_ a (Maybe A.Value) => a -> Maybe (Uri, a)
+unstampNotebookData x = case x ^. data_ of
   Just (A.Object o) | Just (A.Success u) <- A.fromJSON <$> KM.lookup "nls_uri" o ->
-    Just (u, set data_ (KM.lookup "nls_data" o >>= nonNull) lens)
+    Just (u, set data_ (KM.lookup "nls_data" o >>= nonNull) x)
   _ -> Nothing
   where
     nonNull A.Null = Nothing

@@ -245,9 +245,19 @@ transformServerRsp' config SMethod_WorkspaceSymbol _initialParams result = case 
 transformServerRsp' _ SMethod_TextDocumentCodeLens _initialParams (InR null) = return $ InR null
 transformServerRsp' config SMethod_TextDocumentCodeLens initialParams (InL result) = (InL <$>) $
   whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx, origUri}) -> do
-    return $ fmap (stampLensData origUri) (mapMaybe (untransformRanged tx) result)
+    return $ fmap (stampNotebookData origUri) (mapMaybe (untransformRanged tx) result)
 
-transformServerRsp' config SMethod_CodeLensResolve initialParams result = case unstampLensData initialParams of
+transformServerRsp' config SMethod_CodeLensResolve initialParams result = case unstampNotebookData initialParams of
+  Nothing -> return result
+  Just (u, _) -> whenHandled' (notebookConfigHandles config) u result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
+    return $ fromMaybe result (untransformRanged tx result)
+
+transformServerRsp' _ SMethod_TextDocumentDocumentLink _initialParams (InR null) = return $ InR null
+transformServerRsp' config SMethod_TextDocumentDocumentLink initialParams (InL result) = (InL <$>) $
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx, origUri}) -> do
+    return $ fmap (stampNotebookData origUri) (mapMaybe (untransformRanged tx) result)
+
+transformServerRsp' config SMethod_DocumentLinkResolve initialParams result = case unstampNotebookData initialParams of
   Nothing -> return result
   Just (u, _) -> whenHandled' (notebookConfigHandles config) u result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
     return $ fromMaybe result (untransformRanged tx result)
