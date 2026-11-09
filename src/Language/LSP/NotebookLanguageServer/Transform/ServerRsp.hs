@@ -91,6 +91,12 @@ transformServerRsp' config SMethod_TextDocumentOnTypeFormatting initialParams re
       InL edits -> return $ InL $ mapMaybe (untransformRanged tx) edits
       InR null -> return $ InR null
 
+transformServerRsp' config SMethod_TextDocumentFoldingRange initialParams result =
+  whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
+    case result of
+      InL folds -> return $ InL $ mapMaybe (untransformFoldingRange tx) folds
+      InR null -> return $ InR null
+
 transformServerRsp' config SMethod_TextDocumentInlayHint initialParams result =
   whenHandledByInitialParams (notebookConfigHandles config) initialParams result $ withTransformer result $ \(DocumentState {transformer=tx}) ->
     case result of

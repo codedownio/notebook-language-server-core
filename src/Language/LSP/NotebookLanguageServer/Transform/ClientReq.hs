@@ -64,6 +64,7 @@ transformClientReq' config SMethod_DocumentLinkResolve params = case unstampNote
         logWarnN [i|Couldn't transform document link range #{params' ^. range}|]
         return params'
       Just r -> return $ set range r params'
+transformClientReq' config SMethod_TextDocumentFoldingRange params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUri @m params
 transformClientReq' config SMethod_TextDocumentCompletion params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
 transformClientReq' config SMethod_TextDocumentDefinition params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUriAndPosition @m params
 transformClientReq' config SMethod_TextDocumentDiagnostic params = whenHandled (notebookConfigHandles config) params $ withTransformer params $ doTransformUri @m params
