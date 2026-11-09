@@ -88,6 +88,7 @@ test-suite notebook-language-server-core-test
       Test.DidOpen
       Test.DocumentLink
       Test.DocumentSymbol
+      Test.FoldingRange
       Test.Formatting
       Test.Goto
       Test.Hierarchy

@@ -35,6 +35,18 @@ untransformRanged tx x = x
   & traverseOf (range . start) (untransformPosition tx)
   >>= traverseOf (range . end) (untransformPosition tx)
 
+-- | A fold that starts or ends on a line the cells don't have is dropped. The characters are
+-- optional, and only mapped when the server gave them.
+untransformFoldingRange :: Transformer tx => tx -> FoldingRange -> Maybe FoldingRange
+untransformFoldingRange tx fr = do
+  Position startLine' startChar <- untransformPosition tx (Position (fr ^. startLine) (fromMaybe 0 (fr ^. startCharacter)))
+  Position endLine' endChar <- untransformPosition tx (Position (fr ^. endLine) (fromMaybe 0 (fr ^. endCharacter)))
+  return $ fr
+    & set startLine startLine'
+    & set startCharacter (startChar <$ fr ^. startCharacter)
+    & set endLine endLine'
+    & set endCharacter (endChar <$ fr ^. endCharacter)
+
 untransformRangedMaybe :: (Transformer tx, HasRange a (Maybe Range)) => tx -> a -> Maybe a
 untransformRangedMaybe tx x = x
   & traverseOf (range . _Just . start) (untransformPosition tx)
